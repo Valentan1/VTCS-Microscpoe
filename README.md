@@ -26,5 +26,4 @@ Time,Strain
 20,0.262
 ...
 
-## Usage
-[Insert basic installation or run instructions here, e.g., `npm start` or `python main.py`]
+
