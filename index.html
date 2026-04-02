@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VTCS Diagnostic Microscope</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{--bg-main:#06090f;--bg-panel:#0f1623;--bg-input:#0a0f1a;--text-main:#e8edf5;--text-muted:#6b7a94;--accent-blue:#38bdf8;--accent-pink:#f472b6;--accent-yellow:#fbbf24;--accent-red:#ef4444;--accent-green:#34d399;--accent-cyan:#22d3ee;--border-color:#1e2d45}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',-apple-system,'Segoe UI',sans-serif;background:var(--bg-main);padding:20px;color:var(--text-main);min-height:100vh;background-image:radial-gradient(ellipse 800px 400px at 20% 10%,rgba(56,189,248,.03),transparent),radial-gradient(ellipse 600px 600px at 80% 80%,rgba(244,114,182,.02),transparent)}
+.dash{max-width:1440px;margin:auto;background:var(--bg-panel);padding:28px;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.5),0 0 1px rgba(255,255,255,.05) inset;border:1px solid var(--border-color)}
+header{margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+header h2{font-size:20px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:center;gap:10px}
+.ver{font-size:10px;color:var(--accent-green);font-weight:700;background:rgba(52,211,153,.08);padding:3px 10px;border-radius:20px;border:1px solid rgba(52,211,153,.15);letter-spacing:.5px}
+.sub{color:var(--text-muted);font-size:12px}
+.keys{font-size:10px;color:var(--text-muted);opacity:.6;letter-spacing:.3px}
+.ctrls{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.ctrls select{padding:9px 12px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:8px;color:var(--text-main);font-size:12px;font-weight:600;cursor:pointer;outline:none}
+button{padding:9px 16px;border:none;border-radius:8px;color:#fff;font-weight:700;cursor:pointer;transition:all .15s;font-size:11px;letter-spacing:.3px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+button:active{transform:scale(.97)}
+.b-up{background:#1e40af}.b-up:hover{background:#1e3a8a}
+.b-dem{background:#7c3aed}.b-dem:hover{background:#6d28d9}
+.b-run{background:var(--accent-green);color:#064e3b}.b-run:hover{background:#10b981}
+.b-stp{background:var(--accent-red)}.b-stp:hover{background:#dc2626}
+.b-rst{background:#374151}.b-rst:hover{background:#4b5563}
+.b-exp{background:#0e7490}.b-exp:hover{background:#0891b2}
+button:disabled{background:#1e293b!important;color:#475569!important;cursor:not-allowed!important}
+.ptrk{height:3px;background:var(--bg-input);border-radius:2px;overflow:hidden;margin-bottom:12px;opacity:0;transition:opacity .3s}
+.ptrk.on{opacity:1}
+.pfill{height:100%;width:0;background:linear-gradient(90deg,var(--accent-blue),var(--accent-green));border-radius:2px;transition:width .12s linear}
+.eqbox{background:var(--bg-input);border:1px solid var(--border-color);border-radius:10px;padding:14px 18px;font-family:'Courier New',monospace;font-size:11.5px;color:var(--text-muted);margin-bottom:16px;line-height:1.9;display:none;overflow-x:auto}
+.eqbox.vis{display:block}
+.eq-h{color:var(--text-main);font-weight:700}
+.eq-s1{color:var(--accent-blue)}.eq-s2{color:var(--accent-pink)}.eq-s3{color:var(--accent-yellow)}.eq-ch{color:var(--accent-cyan)}
+.pgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:4px}
+@media(max-width:1000px){.pgrid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.pgrid{grid-template-columns:repeat(2,1fr)}}
+.pbox{background:var(--bg-input);padding:12px 8px;border-radius:10px;text-align:center;border:1px solid var(--border-color);transition:.3s}
+.plbl{font-size:9px;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:5px;letter-spacing:.8px}
+.pval{font-family:'Courier New',monospace;font-size:18px;font-weight:900}
+.pval.dead{color:var(--text-muted)!important;font-size:13px;font-weight:400;opacity:.5}
+.bx-s1{border-top:3px solid var(--accent-blue)}.bx-s2{border-top:3px solid var(--accent-pink)}.bx-s3{border-top:3px solid var(--accent-yellow)}.bx-tau{border-top:3px solid var(--accent-red)}.bx-ch{border-top:3px solid var(--accent-cyan)}
+.elock{border-color:var(--accent-yellow)!important;animation:ef 1.5s ease-in-out 3}
+@keyframes ef{0%,100%{box-shadow:0 0 20px rgba(251,191,36,.1)}50%{box-shadow:0 0 40px rgba(251,191,36,.28)}}
+.etxt{color:var(--accent-yellow)!important}
+.irow{display:flex;align-items:center;gap:12px;margin:12px 0;opacity:0;transition:opacity .4s;flex-wrap:wrap}
+.irow.vis{opacity:1}
+.ibadge{padding:5px 14px;border-radius:20px;font-weight:800;font-size:12px;letter-spacing:.4px;border:1px solid}
+.itxt{font-size:11px;color:var(--text-muted);line-height:1.6;max-width:600px}
+.itxt strong{color:var(--text-main)}
+.cbar-w{flex:1;min-width:180px}
+.cbar{height:10px;border-radius:5px;background:var(--bg-input);overflow:hidden;display:flex}
+.cseg{height:100%;transition:width .5s}
+.cleg{display:flex;gap:10px;margin-top:4px;font-size:9px;color:var(--text-muted);font-weight:600}
+.cleg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:3px;vertical-align:middle}
+.ptag{font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700;letter-spacing:.5px;font-family:'Courier New',monospace}
+.ptag.p1{background:rgba(56,189,248,.1);color:var(--accent-blue);border:1px solid rgba(56,189,248,.2)}
+.ptag.p2{background:rgba(52,211,153,.1);color:var(--accent-green);border:1px solid rgba(52,211,153,.2)}
+.mon{background:#020617;color:var(--accent-green);padding:12px 16px;border-radius:8px;font-family:'Courier New',monospace;margin:12px 0;border-left:3px solid var(--accent-green);font-size:12px;font-weight:bold;letter-spacing:.6px;box-shadow:inset 0 2px 8px rgba(0,0,0,.5);display:flex;align-items:center;gap:10px}
+.mdot{width:7px;height:7px;border-radius:50%;background:var(--accent-green);flex-shrink:0;animation:pd 2s ease-in-out infinite}
+@keyframes pd{0%,100%{opacity:1}50%{opacity:.3}}
+.mdot.sol{background:var(--accent-yellow);animation-duration:.5s}
+.mdot.idl{background:var(--text-muted);animation:none;opacity:.5}
+.chcon{height:460px;background:#020617;border-radius:12px;padding:14px;box-shadow:inset 0 0 30px rgba(0,0,0,.8);border:1px solid var(--border-color)}
+@media(max-width:768px){.chcon{height:320px}body{padding:10px}.dash{padding:16px}header h2{font-size:17px}button{padding:7px 10px;font-size:10px}.pval{font-size:15px}}
+table{width:100%;margin-top:20px;border-collapse:collapse;font-size:11px}
+th{text-align:left;padding:9px 10px;background:var(--bg-input);color:var(--text-muted);font-weight:700;text-transform:uppercase;font-size:9.5px;letter-spacing:.8px;border-bottom:2px solid var(--border-color)}
+td{padding:9px 10px;border-bottom:1px solid var(--border-color);color:#c8d3e3}
+tr:hover td{background:rgba(255,255,255,.015)}
+.tst{position:fixed;bottom:20px;right:20px;background:#131b2e;border:1px solid var(--border-color);color:var(--text-main);padding:10px 18px;border-radius:10px;font-size:12px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.4);transform:translateY(100px);opacity:0;transition:all .3s;z-index:2000}
+.tst.show{transform:translateY(0);opacity:1}
+.dov{position:fixed;inset:0;background:rgba(6,9,15,.85);z-index:1000;display:none;align-items:center;justify-content:center;pointer-events:none}
+.dov.on{display:flex}
+.dov-in{border:2px dashed var(--accent-blue);border-radius:20px;padding:50px 70px;text-align:center;color:var(--accent-blue);font-weight:700;font-size:17px;background:rgba(56,189,248,.05)}
+.warn-note{background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.15);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--accent-yellow);margin-top:8px;display:none;line-height:1.5}
+.warn-note.vis{display:block}
+</style>
+</head>
+<body>
+<div class="dov" id="dov"><div class="dov-in">DROP CSV FILE TO ANALYZE</div></div>
+<div class="dash">
+<header>
+<div><h2>VTCS Diagnostic Microscope <span class="ver">v9.0 Gated Hierarchy</span></h2><p class="sub">Integrating Paper 4 Mathematics: <i>dx_2/dt = k_2 x_2 (1-x_2) x_1</i></p></div>
+<span class="keys">Enter = Run | Esc = Reset</span>
+</header>
+<div class="ctrls">
+<input type="file" id="csvUp" accept=".csv" style="display:none">
+<button class="b-up" id="bUpBtn">Upload CSV</button>
+<select id="preSel"><option value="">-- Demo Presets --</option><option value="standard">Standard 3-Stage</option><option value="avalanche">Deep Avalanche (e-Ratio)</option><option value="character">Character-Dominant</option><option value="tension">Tension Spike</option><option value="earthquake">Earthquake-Like (Pure S2)</option><option value="wide_range">Wide-Range Binary (like Bullet Cluster)</option></select>
+<button class="b-dem" id="bDemBtn" disabled>Generate Demo</button>
+<button class="b-run" id="bRunBtn" disabled>Run Decomposition</button>
+<button class="b-rst" id="bRstBtn">Reset</button>
+<button class="b-exp" id="bExpBtn" disabled>Export Results</button>
+</div>
+<div class="ptrk" id="ptrk"><div class="pfill" id="pfill"></div></div>
+<div class="eqbox" id="eqbox"></div>
+<div class="pgrid">
+<div class="pbox bx-s1"><div class="plbl">S1: Base State (w1)</div><div class="pval" id="oW1" style="color:var(--accent-blue)">--</div></div>
+<div class="pbox bx-s2"><div class="plbl">S2: Gated Structure (w2)</div><div class="pval" id="oW2" style="color:var(--accent-pink)">--</div></div>
+<div class="pbox bx-s3"><div class="plbl">S3: Deep Latent (w3)</div><div class="pval" id="oW3" style="color:var(--accent-yellow)">--</div></div>
+<div class="pbox bx-ch"><div class="plbl">Chirp (w4)</div><div class="pval" id="oW4" style="color:var(--accent-cyan)">--</div></div>
+<div class="pbox bx-tau"><div class="plbl">Transmutation (tau)</div><div class="pval" id="oTau" style="color:var(--accent-red)">--</div></div>
+<div class="pbox bx-s2"><div class="plbl">Gated Trigger (t02)</div><div class="pval" id="oT2">--</div></div>
+<div class="pbox bx-s3"><div class="plbl">Deep Trigger (t03)</div><div class="pval" id="oT3">--</div></div>
+<div class="pbox" id="bxKR"><div class="plbl">Avalanche (k3/k2)</div><div class="pval" id="oKR">--</div></div>
+<div class="pbox"><div class="plbl">RMSE</div><div class="pval" id="oRMSE">--</div></div>
+<div class="pbox"><div class="plbl">R-squared</div><div class="pval" id="oR2">--</div></div>
+</div>
+<div class="irow" id="irow">
+<span class="ibadge" id="ibadge"></span>
+<span class="ptag" id="ptag"></span>
+<div class="cbar-w"><div class="cbar" id="cbar"></div><div class="cleg" id="cleg"></div></div>
+<div class="itxt" id="itxt"></div>
+</div>
+<div class="warn-note" id="warnNote"></div>
+<div class="mon" id="mon"><span class="mdot idl" id="mDot"></span><span id="mTxt">SYSTEM IDLE // AWAITING DATASET</span></div>
+<div class="chcon"><canvas id="mainChart"></canvas></div>
+<table id="resTbl">
+<thead><tr><th>Dataset</th><th>Archetype</th><th>Phase</th><th>S1</th><th>S2</th><th>S3</th><th>Chirp</th><th>Tau</th><th>k3/k2</th><th>RMSE</th><th>R2</th></tr></thead>
+<tbody></tbody>
+</table>
+</div>
+<div class="tst" id="tst"></div>
+
+<script>
+/* ===== Core Math ===== */
+function logistic(t, k, t0) { return 1 / (1 + Math.exp(-k * (t - t0))); }
+function chirpFn(t, tc, a) { return t <= 0 ? 0 : Math.pow(Math.min(1, t / tc), a); }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function cpObj(o) { return {w1:o.w1,k1:o.k1,t01:o.t01,w2:o.w2,k2:o.k2,t02:o.t02,w3:o.w3,k3:o.k3,t03:o.t03,w4:o.w4,tc:o.tc,alpha:o.alpha}; }
+
+/* ===== PAPER 4: GATED DIFFERENTIAL ENGINE ===== */
+function getT_at_t(x_arr, T_arr, t_target) {
+    if (t_target <= x_arr[0]) return T_arr[0];
+    if (t_target >= x_arr[x_arr.length-1]) return T_arr[T_arr.length-1];
+    for(let i=1; i<x_arr.length; i++) {
+        if (x_arr[i] >= t_target) {
+            let dx = x_arr[i] - x_arr[i-1];
+            let dt = t_target - x_arr[i-1];
+            return T_arr[i-1] + (dt / dx) * (T_arr[i] - T_arr[i-1]);
+        }
+    }
+    return T_arr[0];
+}
+
+function evalGated(x_arr, p, hS1, hS2, hS3) {
+    let n = x_arr.length;
+    let y1 = new Float64Array(n), y2 = new Float64Array(n), y3 = new Float64Array(n);
+    
+    // Stage 1: Independent Base Layer
+    for(let i=0; i<n; i++) y1[i] = hS1 ? logistic(x_arr[i], p.k1, p.t01) : 1.0;
+    
+    // Stage 2: Gated by Stage 1 (dx2/dt = k2 x2(1-x2) x1)
+    if (hS2) {
+        let T2 = new Float64Array(n); T2[0] = 0;
+        for(let i=1; i<n; i++) T2[i] = T2[i-1] + (x_arr[i]-x_arr[i-1])*(y1[i]+y1[i-1])/2;
+        let T2_target = getT_at_t(x_arr, T2, p.t02);
+        for(let i=0; i<n; i++) y2[i] = 1 / (1 + Math.exp(-p.k2 * (T2[i] - T2_target)));
+    } else { for(let i=0; i<n; i++) y2[i] = 1.0; }
+
+    // Stage 3: Gated by Stage 1 & 2 (dx3/dt = k3 x3(1-x3) x1 x2)
+    if (hS3) {
+        let T3 = new Float64Array(n); T3[0] = 0;
+        for(let i=1; i<n; i++) T3[i] = T3[i-1] + (x_arr[i]-x_arr[i-1])*(y1[i]*y2[i] + y1[i-1]*y2[i-1])/2;
+        let T3_target = getT_at_t(x_arr, T3, p.t03);
+        for(let i=0; i<n; i++) y3[i] = 1 / (1 + Math.exp(-p.k3 * (T3[i] - T3_target)));
+    } else { for(let i=0; i<n; i++) y3[i] = 1.0; }
+
+    if (!hS1) y1.fill(0); if (!hS2) y2.fill(0); if (!hS3) y3.fill(0);
+    return {y1, y2, y3};
+}
+
+/* ===== THE PREDICTOR ENGINE ===== */
+function analyzeDynamics(x, y) {
+    let maxV = 0, peakT = x[Math.floor(x.length / 2)];
+    let step = Math.max(1, Math.floor(x.length / 20)); 
+    for (let i = 0; i < x.length - step; i++) {
+        let dx = x[i+step] - x[i]; if (dx === 0) continue;
+        let v = Math.max(0, (y[i+step] - y[i]) / dx); 
+        if (v > maxV) { maxV = v; peakT = x[i + Math.floor(step/2)]; }
+    }
+    let range = x[x.length - 1] - x[0];
+    let k_approx = clamp(maxV * 4, 1/range, 50/range);
+    return { t_peak: peakT, k_est: isNaN(k_approx) ? 10/range : k_approx };
+}
+
+/* ===== State ===== */
+var chart = null, xData = [], yData = [], dName = '', running = false, abortFlag = false, allRes = [];
+
+/* ===== Presets ===== */
+var PRESETS = {
+    standard:   {name:'Standard 3-Stage', w1:.45,k1:.08,t01:25, w2:.35,k2:.12,t02:60, w3:.15,k3:.25,t03:100, w4:.05,tc:150,a:2, noise:.025,tMax:200,n:101},
+    avalanche:  {name:'Deep Avalanche', w1:.30,k1:.06,t01:20, w2:.30,k2:.10,t02:55, w3:.30,k3:.272,t03:95, w4:.10,tc:140,a:2, noise:.02,tMax:200,n:101},
+    character:  {name:'Character-Dominant', w1:.72,k1:.10,t01:30, w2:.18,k2:.15,t02:70, w3:.05,k3:.20,t03:110, w4:.05,tc:150,a:2, noise:.03,tMax:200,n:101},
+    tension:    {name:'Tension Spike', w1:.28,k1:.07,t01:20, w2:.52,k2:.22,t02:50, w3:.10,k3:.15,t03:90, w4:.10,tc:130,a:2, noise:.025,tMax:200,n:101},
+    earthquake: {name:'Earthquake-Like', w1:.02,k1:.05,t01:10, w2:.97,k2:.18,t02:50, w3:.01,k3:.10,t03:120, w4:.00,tc:150,a:2, noise:.02,tMax:200,n:101},
+    wide_range: {name:'Wide-Range Binary', w1:.40,k1:.04,t01:300, w2:.60,k2:.06,t02:800, w3:.00,k3:.10,t03:1500, w4:.00,tc:2000,a:2, noise:.02,tMax:2000,n:201}
+};
+
+/* ===== Data Loading ===== */
+function loadPreset() {
+    var k = document.getElementById('preSel').value; if (!k) return; var p = PRESETS[k];
+    var x = [], y = [], dt = p.tMax / (p.n - 1);
+    for (var i = 0; i < p.n; i++) {
+        var t = i * dt;
+        var v = p.w1*logistic(t,p.k1,p.t01) + p.w2*logistic(t,p.k2,p.t02) + p.w3*logistic(t,p.k3,p.t03) + p.w4*chirpFn(t,p.tc,p.a) + (Math.random()-.5)*p.noise;
+        x.push(parseFloat(t.toFixed(2))); y.push(Math.max(0, Math.min(1, v)));
+    }
+    xData = x; yData = y; dName = p.name; dataReady(); renderPlot(); toast('Demo: ' + dName);
+}
+
+function loadCSV(file) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var rows = e.target.result.trim().split('\n'), x = [], y = [];
+        for (var i = 1; i < rows.length; i++) {
+            var c = rows[i].split(',');
+            if (c.length >= 2) { var xv = parseFloat(c[0]), yv = parseFloat(c[1]); if (!isNaN(xv) && !isNaN(yv)) { x.push(xv); y.push(yv); } }
+        }
+        if (x.length < 5) { toast('Need at least 5 valid rows'); return; }
+        var mn = Math.min.apply(null, y), mx = Math.max.apply(null, y), rng = mx - mn; if (rng === 0) rng = 1;
+        xData = x; yData = y.map(function(v) { return (v - mn) / rng; });
+        dName = file.name.replace('.csv', ''); dataReady(); renderPlot(); toast('Loaded ' + x.length + ' points');
+    };
+    reader.readAsText(file);
+}
+
+function dataReady() { document.getElementById('bRunBtn').disabled = false; setMon('READY: ' + dName.toUpperCase() + ' [' + xData.length + ' PTS]', 'ready'); }
+
+/* ===== UI Helpers ===== */
+function setMon(t, s) {
+    var d = document.getElementById('mDot'), x = document.getElementById('mTxt'), m = document.getElementById('mon');
+    d.className = 'mdot'; x.textContent = t;
+    if (s === 'idl') { d.classList.add('idl'); m.style.borderColor = 'var(--text-muted)'; m.style.color = 'var(--text-muted)'; }
+    else if (s === 'ready') { m.style.borderColor = 'var(--accent-blue)'; m.style.color = 'var(--accent-blue)'; }
+    else if (s === 'sol') { d.classList.add('sol'); m.style.borderColor = 'var(--accent-yellow)'; m.style.color = 'var(--accent-yellow)'; }
+    else if (s === 'done') { m.style.borderColor = 'var(--accent-green)'; m.style.color = 'var(--accent-green)'; }
+    else if (s === 'elock') { m.style.borderColor = 'var(--accent-yellow)'; m.style.color = 'var(--accent-yellow)'; }
+}
+
+function setProg(p) {
+    var tr = document.getElementById('ptrk'), fl = document.getElementById('pfill');
+    if (p <= 0) { tr.classList.remove('on'); fl.style.width = '0%'; } else { tr.classList.add('on'); fl.style.width = (p * 100) + '%'; }
+}
+function toast(msg) { var t = document.getElementById('tst'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._tid); t._tid = setTimeout(function() { t.classList.remove('show'); }, 3000); }
+
+/* ===== Archetype Classifier ===== */
+function classify(w1, w2, w3, w4) {
+    var T = 0.02, act = [];
+    if (w1 > T) act.push({n:'S1', w:w1}); if (w2 > T) act.push({n:'S2', w:w2}); if (w3 > T) act.push({n:'S3', w:w3}); if (w4 > T) act.push({n:'Ch', w:w4});
+    act.sort(function(a,b){return b.w - a.w;});
+    if (!act.length) return {l:'No Signal', c:'var(--text-muted)', i:'\u00B7', txt:'No capacity saturation detected.'};
+    if (act.length === 1) {
+        if (act[0].n === 'S1') return {l:'Base Process', c:'var(--accent-blue)', i:'\u25C6', txt:'<strong>Paper 1 / Paper 3:</strong> Unified monolithic saturation limit.'};
+        if (act[0].n === 'S2') return {l:'Pure Gated Tension', c:'var(--accent-pink)', i:'\u25B2', txt:'Highly unusual. Requires pre-existing S1 base capacity to activate.'};
+        if (act[0].n === 'S3') return {l:'Pure Latent Cascade', c:'var(--accent-yellow)', i:'\u2605', txt:'Highly unusual. Requires deep pre-existing structure.'};
+        return {l:'Pure Power-Law', c:'var(--accent-cyan)', i:'\u25CE', txt:'<strong>Non-logistic:</strong> Chirp-only behavior.'};
+    }
+    var nm = act.map(function(a){return a.n}).sort().join('+');
+    if (nm === 'S1+S2') return {l:'Gated Hierarchy (Flow State)', c:'#a78bfa', i:'\u25C6\u25B2', txt:'<strong>Paper 4:</strong> Two-stage chronological sequence. S2 activates only when S1 provides capacity. Creates flow-like plateau-breakthrough.'};
+    if (nm === 'S2+S3') return {l:'Deep Grokking', c:'#fb923c', i:'\u25B2\u2605', txt:'<strong>Paper 2/4:</strong> Deep delayed breakthrough.'};
+    if (nm === 'S1+S3') return {l:'Skip-Level Gating', c:'#2dd4bf', i:'\u25C6\u2605', txt:'Latent reasoning activates directly off base syntax without structural middle layer.'};
+    if (nm === 'S1+S2+S3') return {l:'Full Triadic Gating', c:'var(--accent-green)', i:'\u25C6\u25B2\u2605', txt:'<strong>Paper 4 Master Model:</strong> Perfect 3-stage hierarchical dependency. Each stage unlocks the next.'};
+    return {l:'Multi-Component', c:'#c084fc', i:'\u2726', txt:'<strong>Complex hierarchy:</strong> Multiple active capacity spaces.'};
+}
+
+function updateBar(w1, w2, w3, w4) {
+    var bar = document.getElementById('cbar'), leg = document.getElementById('cleg'); bar.innerHTML = ''; leg.innerHTML = '';
+    var segs = [{w:w1,c:'var(--accent-blue)',l:'S1'},{w:w2,c:'var(--accent-pink)',l:'S2'},{w:w3,c:'var(--accent-yellow)',l:'S3'},{w:w4,c:'var(--accent-cyan)',l:'Chirp'}];
+    var tot = w1 + w2 + w3 + w4; if (tot < 0.001) tot = 1;
+    for (var i = 0; i < segs.length; i++) {
+        var s = segs[i]; if (s.w < 0.003) continue;
+        var d = document.createElement('div'); d.className = 'cseg'; d.style.width = (s.w / tot * 100) + '%'; d.style.background = s.c; bar.appendChild(d);
+        var sp = document.createElement('span'); sp.innerHTML = '<i style="background:' + s.c + '"></i>' + s.l + ' ' + (s.w * 100).toFixed(1) + '%'; leg.appendChild(sp);
+    }
+}
+
+/* ===== GATED MSE Builder ===== */
+function makeMSE(x, y, active, regMul) {
+    var n = x.length;
+    var hS1 = active.indexOf('s1') >= 0, hS2 = active.indexOf('s2') >= 0, hS3 = active.indexOf('s3') >= 0, hCh = active.indexOf('chirp') >= 0;
+    
+    return function(p) {
+        var curves = evalGated(x, p, hS1, hS2, hS3);
+        var e = 0;
+        for (var i = 0; i < n; i++) {
+            var pr = 0;
+            if (hS1) pr += p.w1 * curves.y1[i];
+            if (hS2) pr += p.w2 * curves.y2[i];
+            if (hS3) pr += p.w3 * curves.y3[i];
+            if (hCh) pr += p.w4 * chirpFn(x[i], p.tc, p.alpha);
+            if (pr > 1.05) pr = 1.05;
+            e += (pr - y[i]) * (pr - y[i]);
+        }
+        e /= n;
+        
+        var sum = 0;
+        if (hS1) sum += p.w1; if (hS2) sum += p.w2; if (hS3) sum += p.w3; if (hCh) sum += p.w4;
+        e += Math.abs(1.0 - sum) * 0.5;
+        
+        if (hS2) e += p.w2 * 0.002 * regMul;
+        if (hS3) e += p.w3 * 0.025 * regMul;
+        if (hCh) e += p.w4 * 0.015 * regMul;
+        return e;
+    };
+}
+
+/* ===== Data-Driven SA Solver (async) ===== */
+function solveSA(x, y, active, regMul, seeds, iters, onProg, anchor, dyn) {
+    return new Promise(function(resolve) {
+        var mseFn = makeMSE(x, y, active, regMul);
+        var xMin = Math.min.apply(null, x), xMax = Math.max.apply(null, x), range = xMax - xMin;
+        var hS1 = active.indexOf('s1') >= 0, hS2 = active.indexOf('s2') >= 0, hS3 = active.indexOf('s3') >= 0, hCh = active.indexOf('chirp') >= 0;
+        var CHUNK = 800, totalSteps = seeds * iters, gStep = 0, gBest = {err: Infinity};
+        var minGap = Math.max(8, range * 0.05);
+        var sScale = anchor ? 0.3 : 1.0;
+
+        function makeInit(s) {
+            var p;
+            if (anchor && s === 0) { p = cpObj(anchor); } 
+            else if (anchor && s > 0) {
+                p = cpObj(anchor);
+                if (hS1) { p.w1 = clamp(p.w1 + (Math.random()-.5)*.06, 0.01, .95); p.k1 = clamp(p.k1 + (Math.random()-.5)*.02, .001, 2.0); p.t01 = clamp(p.t01 + (Math.random()-.5)*range*.05, xMin, p.t02 - minGap); }
+                if (hS2) { p.w2 = clamp(p.w2 + (Math.random()-.5)*.06, 0.01, .95); p.k2 = clamp(p.k2 + (Math.random()-.5)*.02, .001, 2.0); p.t02 = clamp(p.t02 + (Math.random()-.5)*range*.05, hS1 ? p.t01+minGap : xMin, hS3 ? p.t03-minGap : xMax+range*.3); }
+                if (hS3) { p.w3 = clamp(p.w3 + (Math.random()-.5)*.06, 0.01, .95); p.k3 = clamp(p.k3 + (Math.random()-.5)*.02, .001, 2.0); p.t03 = clamp(p.t03 + (Math.random()-.5)*range*.05, hS2 ? p.t02+minGap : xMin, xMax+range); }
+                if (hCh) { p.w4 = clamp(p.w4 + (Math.random()-.5)*.03, 0.01, .95); p.tc = clamp(p.tc + (Math.random()-.5)*range*.03, Math.max(1,xMax*.3), xMax*3); p.alpha = clamp(p.alpha + (Math.random()-.5)*.2, .3, 6); }
+            } else {
+                let t_base = dyn ? dyn.t_peak : (xMin + range * 0.5);
+                let k_base = dyn ? dyn.k_est : (10 / range);
+                p = {w1:0, k1:0.1, t01:xMin, w2:0, k2:0.1, t02:xMin, w3:0, k3:0.1, t03:xMin, w4:0, tc:xMax, alpha:2};
+
+                if (hS1) { p.w1 = 0.3 + (Math.random()*0.1); p.k1 = clamp(k_base * 0.5 * (1 + s*0.2), 0.001, 2.0); p.t01 = xMin + range * (0.1 + (s % 3)*0.1); }
+                if (hS2) { p.w2 = 0.5 + (Math.random()*0.1); p.k2 = clamp(k_base * (1 + s*0.2), 0.001, 2.0); p.t02 = p.t01 + minGap + range * (0.2 + (s % 3)*0.1); }
+                if (hS3) { p.w3 = 0.2; p.k3 = clamp(k_base * 1.5, 0.001, 2.0); p.t03 = p.t02 + minGap + range * 0.2; }
+                if (hCh) { p.w4 = 0.1; p.tc = xMax; p.alpha = 2; }
+            }
+            var sum = p.w1 + p.w2 + p.w3 + p.w4; if (sum > 0.001) { p.w1 /= sum; p.w2 /= sum; p.w3 /= sum; p.w4 /= sum; }
+            return p;
+        }
+
+        function mutate(cur, temp) {
+            var m = cpObj(cur); var sc = temp * sScale;
+            if (hS1) { m.w1 = clamp(m.w1 + (Math.random()-.5)*sc*.1, 0, 1); m.k1 = clamp(m.k1 + (Math.random()-.5)*sc*cur.k1*0.2, .001, 2.0); m.t01 = clamp(m.t01 + (Math.random()-.5)*sc*range*.15, xMin-range*.05, hS2 ? m.t02 : xMax+range*.5); }
+            if (hS2) { m.w2 = clamp(m.w2 + (Math.random()-.5)*sc*.1, 0, 1); m.k2 = clamp(m.k2 + (Math.random()-.5)*sc*cur.k2*0.2, .001, 2.0); m.t02 = clamp(m.t02 + (Math.random()-.5)*sc*range*.15, hS1 ? m.t01 : xMin-range*.05, hS3 ? m.t03 : xMax+range*.5); }
+            if (hS3) { m.w3 = clamp(m.w3 + (Math.random()-.5)*sc*.1, 0, 1); m.k3 = clamp(m.k3 + (Math.random()-.5)*sc*cur.k3*0.2, .001, 2.0); m.t03 = clamp(m.t03 + (Math.random()-.5)*sc*range*.15, hS2 ? m.t02 : xMin-range*.05, xMax+range); }
+            if (hCh) { m.w4 = clamp(m.w4 + (Math.random()-.5)*sc*.05, 0, 1); m.tc = clamp(m.tc + (Math.random()-.5)*sc*range*.05, Math.max(1, xMax*.3), xMax*3); m.alpha = clamp(m.alpha + (Math.random()-.5)*sc*.1, .3, 6); }
+            return m;
+        }
+
+        function runSeed(si) {
+            if (abortFlag) { resolve(gBest); return; }
+            var init = makeInit(si); var cur = cpObj(init); cur.err = mseFn(cur);
+            var best = cpObj(init); best.err = cur.err;
+            var temp = 1.0, iter = 0;
+
+            function tick() {
+                if (abortFlag) { resolve(gBest); return; }
+                for (var c = 0; c < CHUNK && iter < iters; c++, iter++, gStep++) {
+                    var m = mutate(cur, temp); var err = mseFn(m);
+                    if (err < cur.err || Math.random() < Math.exp(-(err - cur.err) / (temp * .005))) {
+                        cur = cpObj(m); cur.err = err; if (err < best.err) { best = cpObj(m); best.err = err; }
+                    }
+                    if (iter % 100 === 0) temp *= .985;
+                }
+                if (best.err < gBest.err) { gBest = cpObj(best); gBest.err = best.err; }
+                onProg(gStep / totalSteps, {seed:si+1, iter:iter, bestErr:gBest.err});
+                if (iter < iters) setTimeout(tick, 0); else if (si < seeds - 1) runSeed(si + 1); else resolve(gBest);
+            }
+            tick();
+        }
+        runSeed(0);
+    });
+}
+
+function solveSingle(x, y, comp) {
+    var xMin = Math.min.apply(null, x), xMax = Math.max.apply(null, x), range = xMax - xMin, n = x.length;
+    var best = {err: Infinity}, idx = comp === 's1' ? '1' : comp === 's2' ? '2' : '3';
+    var minK = 1 / range, maxK = 50 / range, stepK = (maxK - minK) / 50, stepT = range / 35;
+
+    for (var k = minK; k <= maxK; k += stepK) {
+        for (var t0 = xMin - range*.15; t0 <= xMax + range*.3; t0 += stepT) {
+            var num = 0, den = 0;
+            for (var i = 0; i < n; i++) { var L = logistic(x[i], k, t0); num += y[i]*L; den += L*L; }
+            var w = Math.max(0, num / (den || 1)), e = 0;
+            for (var i = 0; i < n; i++) { var d = w*logistic(x[i],k,t0)-y[i]; e += d*d; }
+            e /= n; if (e < best.err) best = {w:w, k:k, t0:t0, err:e};
+        }
+    }
+    var fineStepK = stepK / 5, fineStepT = range / 120;
+    for (var k = Math.max(minK, best.k-stepK*2); k <= best.k+stepK*2; k += fineStepK) {
+        for (var t0 = best.t0-range*.06; t0 <= best.t0+range*.06; t0 += fineStepT) {
+            var num = 0, den = 0;
+            for (var i = 0; i < n; i++) { var L = logistic(x[i], k, t0); num += y[i]*L; den += L*L; }
+            var w = Math.max(0, num / (den || 1)), e = 0;
+            for (var i = 0; i < n; i++) { var d = w*logistic(x[i],k,t0)-y[i]; e += d*d; }
+            e /= n; if (e < best.err) best = {w:w, k:k, t0:t0, err:e};
+        }
+    }
+    var r = {w1:0,k1:.1,t01:xMin, w2:0,k2:.1,t02:xMin+range*.5, w3:0,k3:.1,t03:xMin+range*.75, w4:0,tc:xMax,alpha:2, err:best.err};
+    r['w'+idx] = best.w; r['k'+idx] = best.k; r['t0'+idx] = best.t0; return r;
+}
+
+function handleRun() { if (running) { abortFlag = true; return; } runSolver(); }
+
+function makeAnchor(res1, active) {
+    var a = cpObj(res1);
+    var hS1 = active.indexOf('s1') >= 0, hS2 = active.indexOf('s2') >= 0, hS3 = active.indexOf('s3') >= 0, hCh = active.indexOf('chirp') >= 0;
+    if (!hS1) { a.w1 = 0; a.k1 = .1; } if (!hS2) { a.w2 = 0; a.k2 = .1; } if (!hS3) { a.w3 = 0; a.k3 = .1; } if (!hCh) { a.w4 = 0; }
+    var sum = a.w1 + a.w2 + a.w3 + a.w4; if (sum > 0.001) { a.w1 /= sum; a.w2 /= sum; a.w3 /= sum; a.w4 /= sum; }
+    return a;
+}
+
+function runSolver() {
+    if (!xData.length || running) return;
+    const dyn = analyzeDynamics(xData.slice(), yData.slice());
+
+    running = true; abortFlag = false;
+    var btn = document.getElementById('bRunBtn'); btn.disabled = false; btn.textContent = 'Stop'; btn.className = 'b-stp';
+    document.getElementById('warnNote').classList.remove('vis');
+    var x = xData.slice(), y = yData.slice(), ALL = ['s1','s2','s3','chirp'];
+
+    setMon('PHASE 1: Gated Differential Exploration // 5 SEEDS', 'sol'); setProg(0.001);
+
+    solveSA(x, y, ALL, 1.0, 5, 40000, function(pct, info) {
+        setProg(pct); setMon('PHASE 1: Seed ' + info.seed + '/5 // Iter ' + info.iter + ' // MSE: ' + info.bestErr.toFixed(6), 'sol');
+    }, null, dyn).then(function(res1) {
+        if (abortFlag) { finishAbort(); return; }
+        var THRESH = 0.02, active2 = [];
+        if (res1.w1 > THRESH) active2.push('s1'); if (res1.w2 > THRESH) active2.push('s2'); if (res1.w3 > THRESH) active2.push('s3'); if (res1.w4 > THRESH) active2.push('chirp');
+        var pruned = active2.length < 4;
+
+        if (!pruned) { finishDone(res1, ALL, 'full', res1.err, res1.err); } 
+        else if (active2.length === 0) {
+            var ym = 0; for (var i = 0; i < y.length; i++) ym += y[i]; ym /= y.length;
+            var fe = 0; for (var i = 0; i < y.length; i++) { var d = y[i]-ym; fe += d*d; } fe /= y.length;
+            var flat = {w1:0,k1:.1,t01:Math.min.apply(null,x), w2:0,k2:.1,t02:Math.min.apply(null,x), w3:0,k3:.1,t03:Math.min.apply(null,x), w4:0,tc:Math.max.apply(null,x),alpha:2, err:fe};
+            finishDone(flat, [], 'flat', res1.err, fe);
+        } else if (active2.length === 1) {
+            setMon('PHASE 2: Grid-Optimal (' + active2[0].toUpperCase() + ')', 'sol');
+            setTimeout(function() {
+                if (abortFlag) { finishAbort(); return; }
+                var res2;
+                if (active2[0] === 'chirp') {
+                    var xMax = Math.max.apply(null, x), n = x.length, cBest = {err:Infinity};
+                    for (var tc = Math.max(1,xMax*.3); tc <= xMax*3; tc += xMax/20) {
+                        for (var al = .3; al <= 6; al += .1) {
+                            var num=0,den=0; for (var i=0;i<n;i++){var C=chirpFn(x[i],tc,al);num+=y[i]*C;den+=C*C;}
+                            var w=Math.max(0,num/(den||1)), e=0; for(var j=0;j<n;j++){var d=w*chirpFn(x[j],tc,al)-y[j];e+=d*d;}
+                            e/=n;if(e<cBest.err)cBest={w:w,tc:tc,alpha:al,err:e};
+                        }
+                    }
+                    res2={w1:0,k1:.1,t01:0,w2:0,k2:.1,t02:0,w3:0,k3:.1,t03:0,w4:cBest.w,tc:cBest.tc,alpha:cBest.alpha,err:cBest.err};
+                } else { res2 = solveSingle(x, y, active2[0]); }
+                finishDone(res2, active2, 'grid', res1.err, res2.err);
+            }, 30);
+        } else {
+            var anchor = makeAnchor(res1, active2), labels = active2.map(function(a){return a.toUpperCase()}).join('+');
+            setMon('PHASE 2: Gated Refinement (' + labels + ') // 3 SEEDS', 'sol'); setProg(0.001);
+
+            solveSA(x, y, active2, 0.2, 3, 25000, function(pct, info) {
+                setProg(pct); setMon('PHASE 2: ' + labels + ' // Seed ' + info.seed + '/3 // MSE: ' + info.bestErr.toFixed(6), 'sol');
+            }, anchor).then(function(res2) {
+                if (abortFlag) { finishAbort(); return; }
+                var drift = Math.abs(res2.err - res1.err) / (res1.err + 0.0001);
+                if (drift > 0.5) {
+                    var warn = document.getElementById('warnNote');
+                    warn.textContent = '\u26A0 Phase 2 refinement drifted from Phase 1 anchor (drift: ' + (drift*100).toFixed(0) + '%). Using Phase 1 result for stability.';
+                    warn.classList.add('vis'); finishDone(res1, active2, 'p1-fallback', res1.err, res1.err);
+                } else { finishDone(res2, active2, 'refined', res1.err, res2.err); }
+            });
+        }
+    });
+}
+
+function finishAbort() { running = false; var btn = document.getElementById('bRunBtn'); btn.className = 'b-run'; btn.textContent = 'Run Decomposition'; btn.disabled = !xData.length; setMon('SOLVER ABORTED', 'idl'); setProg(0); toast('Solver stopped'); }
+
+function finishDone(res, active, phase, err1, err2) {
+    running = false; var btn = document.getElementById('bRunBtn'); btn.className = 'b-run'; btn.textContent = 'Run Decomposition'; btn.disabled = !xData.length; setProg(0);
+    var hS1 = active.indexOf('s1') >= 0, hS2 = active.indexOf('s2') >= 0, hS3 = active.indexOf('s3') >= 0, hCh = active.indexOf('chirp') >= 0;
+
+    var yMean = 0; for (var i = 0; i < yData.length; i++) yMean += yData[i]; yMean /= yData.length;
+    var ssTot = 0; for (var i = 0; i < yData.length; i++) { var d = yData[i]-yMean; ssTot += d*d; }
+    
+    var curves = evalGated(xData, res, hS1, hS2, hS3);
+    var ssRes = 0;
+    for (var i = 0; i < xData.length; i++) {
+        var pr = 0;
+        if (hS1) pr += res.w1 * curves.y1[i];
+        if (hS2) pr += res.w2 * curves.y2[i];
+        if (hS3) pr += res.w3 * curves.y3[i];
+        if (hCh) pr += res.w4 * chirpFn(xData[i], res.tc, res.alpha);
+        if (pr > 1.05) pr = 1.05;
+        var dd = pr - yData[i]; ssRes += dd*dd;
+    }
+    var r2 = ssTot > 0 ? Math.max(0, 1 - ssRes / ssTot) : 0;
+    var rmse = Math.sqrt(res.err);
+
+    var tau = null;
+    if (hS1 && hS2) {
+        var tMax = Math.max.apply(null, xData);
+        for (var t = 0; t < tMax; t += 0.5) {
+            // Find crossover using continuous evalGated approximations
+            var evalCur = evalGated([t], res, true, true, false);
+            var evalNext = evalGated([t+0.5], res, true, true, false);
+            var ds1 = res.w1 * (evalNext.y1[0] - evalCur.y1[0]);
+            var ds2 = res.w2 * (evalNext.y2[0] - evalCur.y2[0]);
+            if (ds2 > ds1 && t > res.t01) { tau = t; break; }
+        }
+    }
+
+    var kRatio = null; if (hS2 && hS3 && res.k2 > 0.001) kRatio = res.k3 / res.k2;
+    var isELock = kRatio !== null && Math.abs(kRatio - 2.718) < 0.3;
+    var arch = classify(res.w1, res.w2, res.w3, res.w4);
+
+    function setV(id, val, dead) { var el = document.getElementById(id); el.textContent = val; el.className = 'pval' + (dead ? ' dead' : ''); }
+    setV('oW1', hS1 ? res.w1.toFixed(3) : '--', !hS1); setV('oW2', hS2 ? res.w2.toFixed(3) : '--', !hS2); setV('oW3', hS3 ? res.w3.toFixed(3) : '--', !hS3); setV('oW4', hCh ? res.w4.toFixed(3) : '--', !hCh);
+    setV('oTau', tau !== null ? tau.toFixed(1) : '--', tau === null);
+    setV('oT2', hS2 ? res.t02.toFixed(1) : '--', !hS2); setV('oT3', hS3 ? res.t03.toFixed(1) : '--', !hS3);
+    setV('oKR', kRatio !== null ? (kRatio.toFixed(3) + (isELock ? ' (e)' : '')) : '--', kRatio === null);
+
+    var rmseEl = document.getElementById('oRMSE'); rmseEl.textContent = rmse.toFixed(4); rmseEl.style.color = rmse < .015 ? 'var(--accent-green)' : rmse < .035 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+    var r2El = document.getElementById('oR2'); r2El.textContent = (r2*100).toFixed(1) + '%'; r2El.style.color = r2 > .95 ? 'var(--accent-green)' : r2 > .85 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+
+    var krBox = document.getElementById('bxKR'), krEl = document.getElementById('oKR');
+    krBox.classList.remove('elock'); krEl.classList.remove('etxt'); if (isELock) { krBox.classList.add('elock'); krEl.classList.add('etxt'); }
+
+    document.getElementById('irow').classList.add('vis');
+    var ibadge = document.getElementById('ibadge'); ibadge.textContent = arch.i + ' ' + arch.l; ibadge.style.color = arch.c; ibadge.style.borderColor = arch.c;
+    var ptag = document.getElementById('ptag');
+    if (phase === 'full') { ptag.textContent = 'PHASE 1'; ptag.className = 'ptag p1'; } else if (phase === 'grid') { ptag.textContent = 'P2 GRID'; ptag.className = 'ptag p2'; } else if (phase === 'p1-fallback') { ptag.textContent = 'P1 FALLBACK'; ptag.className = 'ptag p1'; } else { ptag.textContent = 'P2 ANCHORED'; ptag.className = 'ptag p2'; }
+
+    document.getElementById('itxt').innerHTML = arch.txt; updateBar(res.w1, res.w2, res.w3, res.w4);
+
+    var improvement = (phase !== 'full' && phase !== 'flat' && err1 > 0) ? ((err1 - err2) / err1 * 100) : 0;
+    var impNote = (phase !== 'full' && phase !== 'flat' && improvement > 0) ? ' // RMSE improved ' + improvement.toFixed(1) + '%' : '';
+    if (isELock) setMon('COMPLETE // ' + arch.l.toUpperCase() + ' // e-LOCK k3/k2=' + (kRatio||0).toFixed(3) + ' // R2=' + (r2*100).toFixed(1) + '%' + impNote, 'elock');
+    else setMon('COMPLETE // ' + arch.l.toUpperCase() + ' // R2=' + (r2*100).toFixed(1) + '%' + impNote, 'done');
+
+    var eq = document.getElementById('eqbox'); eq.classList.add('vis');
+    var parts = [];
+    if (hS1) parts.push('<span class="eq-s1">' + res.w1.toFixed(3) + '</span>\u00B7S1(t)');
+    if (hS2) parts.push('<span class="eq-s2">' + res.w2.toFixed(3) + '</span>\u00B7S2(t)');
+    if (hS3) parts.push('<span class="eq-s3">' + res.w3.toFixed(3) + '</span>\u00B7S3(t)');
+    if (hCh) parts.push('<span class="eq-ch">' + res.w4.toFixed(3) + '</span>\u00B7Chirp(t)');
+    eq.innerHTML = '<span class="eq-h">C(t) = </span>' + parts.join(' + ') +
+        '<br><span style="color:var(--text-muted)">dS1/dt = k1\u00B7S1(1-S1) &nbsp;|&nbsp; dS2/dt = k2\u00B7S2(1-S2)\u00B7S1 &nbsp;|&nbsp; dS3/dt = k3\u00B7S3(1-S3)\u00B7S1\u00B7S2</span>' +
+        '<br><span style="color:var(--text-muted)">Active: ' + active.map(function(a){return a.toUpperCase()}).join(', ') + ' | Tau: ' + (tau!==null?tau.toFixed(1):'N/A') + ' | RMSE: ' + rmse.toFixed(4) + ' | R2: ' + (r2*100).toFixed(1) + '%</span>';
+
+    renderPlot(res, tau, active);
+
+    var tr = document.createElement('tr'); function dv(v, dead) { return dead ? '<span style="color:var(--text-muted);opacity:.4">--</span>' : v; }
+    var r2c = r2 > .95 ? 'var(--accent-green)' : r2 > .85 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+    var phaseLabel = phase === 'full' ? 'P1' : phase === 'grid' ? 'P2-Grid' : phase === 'p1-fallback' ? 'P1-FB' : 'P2-Ref';
+    tr.innerHTML = '<td><strong>' + dName + '</strong></td><td><span style="color:' + arch.c + ';font-weight:700;font-size:10px">' + arch.i + ' ' + arch.l + '</span></td><td><span class="ptag ' + (phase==='full'||phase==='p1-fallback'?'p1':'p2') + '">' + phaseLabel + '</span></td><td style="color:var(--accent-blue)">' + dv(res.w1.toFixed(3), !hS1) + '</td><td style="color:var(--accent-pink)">' + dv(res.w2.toFixed(3), !hS2) + '</td><td style="color:var(--accent-yellow)">' + dv(res.w3.toFixed(3), !hS3) + '</td><td style="color:var(--accent-cyan)">' + dv(res.w4.toFixed(3), !hCh) + '</td><td style="color:var(--accent-red);font-weight:bold">' + dv(tau!==null?tau.toFixed(1):'--', tau===null) + '</td><td' + (isELock?' class="etxt"':'') + '>' + dv(kRatio!==null?(kRatio.toFixed(3)+(isELock?' (e)':'')):'--', kRatio===null) + '</td><td>' + rmse.toFixed(4) + '</td><td style="color:' + r2c + ';font-weight:bold">' + (r2*100).toFixed(1) + '%</td>';
+    document.querySelector('#resTbl tbody').appendChild(tr);
+
+    allRes.push({dataset:dName, arch:arch.l, phase:phase, w1:res.w1, w2:res.w2, w3:res.w3, w4:res.w4, k1:res.k1, k2:res.k2, k3:res.k3, t01:res.t01, t02:res.t02, t03:res.t03, tc:res.tc, alpha:res.alpha, tau:tau, kRatio:kRatio, rmse:rmse, r2:r2, eLock:isELock, active:active.join(',')});
+    document.getElementById('bExpBtn').disabled = false;
+}
+
+function renderPlot(res, tau, active) {
+    if (!active) active = ['s1','s2','s3','chirp'];
+    var hS1 = active.indexOf('s1') >= 0, hS2 = active.indexOf('s2') >= 0, hS3 = active.indexOf('s3') >= 0, hCh = active.indexOf('chirp') >= 0;
+    var ds = [{label:'Observed Data', data:xData.map(function(x,i){return{x:x,y:yData[i]}}), backgroundColor:'rgba(232,237,245,0.7)', pointRadius:xData.length>150?2:4, borderWidth:0, order:10}];
+    if (res) {
+        var peakT = res.t01; if (hS2 && res.t02 > peakT) peakT = res.t02; if (hS3 && res.t03 > peakT) peakT = res.t03;
+        var drawMax = Math.max(Math.max.apply(null, xData), peakT) + 20;
+        var N = 300, dt = drawMax / N, t_arr = new Float64Array(N+1);
+        for(var i=0; i<=N; i++) t_arr[i] = i*dt;
+        
+        var curves = evalGated(t_arr, res, hS1, hS2, hS3);
+        var tot=[], s1=[], s2=[], s3=[], ch=[];
+        
+        for (var i = 0; i <= N; i++) {
+            var t = t_arr[i];
+            var y1 = hS1 ? res.w1*curves.y1[i] : 0;
+            var y2 = hS2 ? res.w2*curves.y2[i] : 0;
+            var y3 = hS3 ? res.w3*curves.y3[i] : 0;
+            var y4 = hCh ? res.w4*chirpFn(t,res.tc,res.alpha) : 0;
+            tot.push({x:t, y:Math.min(1.05, y1+y2+y3+y4)});
+            s1.push({x:t, y:y1}); s2.push({x:t, y:y2}); s3.push({x:t, y:y3}); ch.push({x:t, y:y4});
+        }
+        ds.push({label:'Total Fit', data:tot, borderColor:'#34d399', backgroundColor:'rgba(52,211,153,0.06)', fill:'origin', borderWidth:3, showLine:true, pointRadius:0, order:1});
+        if (hS1) ds.push({label:'S1 (Base State)', data:s1, borderColor:'#38bdf8', borderWidth:1.5, borderDash:[5,3], showLine:true, pointRadius:0, order:2});
+        if (hS2) ds.push({label:'S2 (Gated Structure)', data:s2, borderColor:'#f472b6', borderWidth:1.5, borderDash:[5,3], showLine:true, pointRadius:0, order:3});
+        if (hS3) ds.push({label:'S3 (Deep Latent)', data:s3, borderColor:'#fbbf24', borderWidth:1.5, borderDash:[4,4], showLine:true, pointRadius:0, order:4});
+        if (hCh) ds.push({label:'Chirp', data:ch, borderColor:'#22d3ee', borderWidth:1, borderDash:[2,3], showLine:true, pointRadius:0, order:5});
+        if (tau !== null) ds.push({label:'Transmutation (tau)', data:[{x:tau,y:0},{x:tau,y:1.1}], borderColor:'#ef4444', borderWidth:2, borderDash:[8,4], showLine:true, pointRadius:0, order:6});
+    }
+    if (chart) chart.destroy();
+    chart = new Chart(document.getElementById('mainChart'), {
+        type:'scatter', data:{datasets:ds},
+        options:{animation:false, maintainAspectRatio:false, responsive:true, interaction:{mode:'nearest',intersect:false},
+            scales:{ y:{min:0,max:1.1, grid:{color:'rgba(30,45,69,0.6)',lineWidth:.5}, ticks:{color:'#6b7a94',font:{size:11}}, title:{display:true,text:'Normalized Capacity',color:'#6b7a94',font:{size:11}}}, x:{grid:{color:'rgba(30,45,69,0.6)',lineWidth:.5}, ticks:{color:'#6b7a94',font:{size:11}}, title:{display:true,text:'Time / Scale Factor',color:'#6b7a94',font:{size:11}}} },
+            plugins:{ legend:{labels:{color:'#c8d3e3',font:{family:'Inter',size:11},usePointStyle:true,pointStyleWidth:12,padding:16}}, tooltip:{backgroundColor:'#0f1623',borderColor:'#1e2d45',borderWidth:1,titleColor:'#e8edf5',bodyColor:'#c8d3e3',titleFont:{weight:'bold'},callbacks:{label:function(ctx){return ctx.dataset.label+': '+ctx.parsed.y.toFixed(4)}}} }
+        }
+    });
+}
+
+function resetAll() {
+    if (running) { abortFlag = true; return; }
+    xData = []; yData = []; dName = ''; document.getElementById('bRunBtn').disabled = true; document.getElementById('bExpBtn').disabled = true; document.getElementById('preSel').value = ''; document.getElementById('eqbox').classList.remove('vis'); document.getElementById('eqbox').innerHTML = ''; document.getElementById('irow').classList.remove('vis'); document.getElementById('warnNote').classList.remove('vis');
+    var ids = ['oW1','oW2','oW3','oW4','oTau','oT2','oT3','oKR','oRMSE','oR2']; for (var i = 0; i < ids.length; i++) { var el = document.getElementById(ids[i]); el.textContent = '--'; el.className = 'pval'; el.style.color = ''; }
+    document.getElementById('bxKR').classList.remove('elock'); document.querySelector('#resTbl tbody').innerHTML = ''; allRes = []; setMon('SYSTEM IDLE // AWAITING DATASET', 'idl'); setProg(0); if (chart) { chart.destroy(); chart = null; } toast('Dashboard reset');
+}
+
+function exportCSV() {
+    if (!allRes.length) return;
+    var csv = 'Dataset,Archetype,Phase,S1,S2,S3,Chirp,k1,k2,k3,t01,t02,t03,tc,alpha,Tau,k3/k2,RMSE,R2,e-Lock,Active\n';
+    for (var i = 0; i < allRes.length; i++) {
+        var r = allRes[i];
+        csv += [r.dataset,r.arch,r.phase,r.w1,r.w2,r.w3,r.w4,r.k1,r.k2,r.k3,r.t01,r.t02,r.t03,r.tc,r.alpha, r.tau!==null?r.tau.toFixed(2):'N/A',r.kRatio!==null?r.kRatio.toFixed(4):'N/A',r.rmse.toFixed(4),r.r2.toFixed(4),r.eLock?'YES':'NO',r.active].map(function(v){return typeof v==='number'?v.toFixed(4):v}).join(',') + '\n';
+    }
+    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download = 'vtcs_results.csv'; a.click(); URL.revokeObjectURL(a.href); toast('Results exported');
+}
+
+document.addEventListener('dragover', function(e) { e.preventDefault(); document.getElementById('dov').classList.add('on'); });
+document.addEventListener('dragleave', function(e) { if (!e.relatedTarget || e.relatedTarget === document.documentElement) document.getElementById('dov').classList.remove('on'); });
+document.addEventListener('drop', function(e) { e.preventDefault(); document.getElementById('dov').classList.remove('on'); var f = e.dataTransfer.files[0]; if (f && f.name.indexOf('.csv') >= 0) loadCSV(f); });
+document.addEventListener('keydown', function(e) { if (e.key === 'Enter' && !document.getElementById('bRunBtn').disabled && !running) handleRun(); if (e.key === 'Escape') resetAll(); });
+
+(function init() {
+    document.getElementById('bUpBtn').addEventListener('click', function() { document.getElementById('csvUp').click(); });
+    document.getElementById('csvUp').addEventListener('change', function(e) { var f = e.target.files[0]; if (f) loadCSV(f); });
+    document.getElementById('preSel').addEventListener('change', function() { document.getElementById('bDemBtn').disabled = !this.value; });
+    document.getElementById('bDemBtn').addEventListener('click', loadPreset); document.getElementById('bRunBtn').addEventListener('click', handleRun); document.getElementById('bRstBtn').addEventListener('click', resetAll); document.getElementById('bExpBtn').addEventListener('click', exportCSV);
+})();
+</script>
+</body>
+</html>
